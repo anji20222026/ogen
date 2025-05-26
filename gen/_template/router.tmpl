@@ -21,11 +21,9 @@ func (s *Server) cutPrefix(path string) (string, bool) {
 // calling handler that matches the path or returning not found error.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	elem := r.URL.Path
-	elemIsEscaped := false
 	if rawPath := r.URL.RawPath; rawPath != "" {
 		if normalized, ok := uri.NormalizeEscapedPath(rawPath); ok {
 			elem = normalized
-			elemIsEscaped = strings.ContainsRune(elem, '%')
 		}
 	}
 
@@ -181,7 +179,7 @@ func (s *WebhookServer) Handler(webhookName string) http.Handler {
 	{{- range $r := $.Routes }}
 	case {{ quote $r.Method }}:
 		{{- $op := $r.Operation }}
-		s.handle{{ $op.Name }}Request(w, r)
+		s.Handle{{ $op.Name }}Request(w, r)
 	{{- end }}
 	default:
 		s.notAllowed(w, r, {{ quote $.AllowedMethods }})
