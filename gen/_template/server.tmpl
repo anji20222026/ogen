@@ -39,7 +39,6 @@ type {{ $group.Name }}Handler interface {
 }
 
 {{- end}}
-
 // Server implements http server based on OpenAPI v3 specification and
 // calls Handler to handle requests.
 type Server struct {
@@ -50,8 +49,7 @@ type Server struct {
 	baseServer
 }
 
-// NewServer creates new Server.
-func NewServer(h Handler, {{- if $.Securities }}sec SecurityHandler,{{- end }}opts ...ServerOption) (*Server, error) {
+func NewServer(h Handler, {{- if $.Securities }}sec SecurityHandler,{{- end }}opts ...ServerOption)  (*Server, error)  {
 	s, err := newServerConfig(opts...).baseServer()
 	if err != nil {
 		return nil, err
@@ -63,6 +61,20 @@ func NewServer(h Handler, {{- if $.Securities }}sec SecurityHandler,{{- end }}op
 		{{- end }}
 		baseServer: s,
 	}, nil
+}
+
+// Register request handlers in router.
+func (s *Server) Register(r chi.Router) {
+	{{- range $op := $.Operations }}
+	r.MethodFunc("{{ $op.Spec.HTTPMethod }}", "{{ $op.Spec.Path }}", s.Handle{{ $op.Name }}Request)
+	{{- end }}
+}
+
+// DefaultMux returns new *chi.Mux with called Register method on it.
+func (s *Server) DefaultMux() *chi.Mux {
+	mux := chi.NewMux()
+	s.Register(mux)
+	return mux
 }
 {{- end }}
 

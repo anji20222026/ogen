@@ -181,11 +181,7 @@ func (s *WebhookServer) Handler(webhookName string) http.Handler {
 	{{- range $r := $.Routes }}
 	case {{ quote $r.Method }}:
 		{{- $op := $r.Operation }}
-		s.handle{{ $op.Name }}Request([{{ $op.PathParamsCount }}]string{
-		{{- range $i, $_ := times $op.PathParamsCount }}
-			args[{{ $i }}],
-		{{- end }}
-		}, elemIsEscaped, w, r)
+		s.handle{{ $op.Name }}Request(w, r)
 	{{- end }}
 	default:
 		s.notAllowed(w, r, {{ quote $.AllowedMethods }})
