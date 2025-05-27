@@ -197,6 +197,36 @@ func putBuffer(b *bytes.Buffer) {
 	bufPool.Put(b)
 }
 
+func (w *writer) HandlersGenerate(templateName, fileName string, cfg TemplateConfig) (rerr error) {
+	filepath := fmt.Sprintf("%s_impl.go", cfg.Package)
+
+	buf := getBuffer()
+	defer putBuffer(buf)
+
+	if err := w.t.ExecuteTemplate(buf, templateName, cfg); err != nil {
+		return errors.Wrap(err, "execute")
+	}
+
+	generated := buf.Bytes()
+	defer func() {
+		if rerr != nil {
+			_ = os.WriteFile(fileName+".dump", generated, 0o644)
+		}
+	}()
+
+	formatted, err := imports.Process(filepath, generated, nil)
+	if err != nil {
+		return &ErrGoFormat{
+			err: err,
+		}
+	}
+
+	if err := w.fs.WriteFile(filepath, formatted); err != nil {
+		return errors.Wrap(err, "write")
+	}
+
+	return nil
+}
 // Generate executes template to file using config.
 func (w *writer) Generate(templateName, fileName string, cfg TemplateConfig) (rerr error) {
 	buf := getBuffer()
@@ -296,6 +326,10 @@ func (g *Generator) WriteSource(fs FileSystem, pkgName string) error {
 			labels := pprof.Labels("template", templateName)
 			pprof.Do(ctx, labels, func(ctx context.Context) {
 				err = w.Generate(templateName, fileName, cfg)
+				if templateName == "server" {
+					w.HandlersGenerate("impl.tmpl", fileName, cfg)
+					
+				}
 			})
 			if err != nil {
 				return errors.Wrapf(err, "template %q", templateName)
@@ -347,6 +381,7 @@ func (g *Generator) WriteSource(fs FileSystem, pkgName string) error {
 		}
 
 		generate(fileName, t.name)
+		
 	}
 
 	return grp.Wait()
@@ -388,3 +423,4 @@ func (g *Generator) hasURIObjectParams() bool {
 		return (t.IsStruct() || t.IsMap()) && t.HasFeature("uri")
 	})
 }
+
