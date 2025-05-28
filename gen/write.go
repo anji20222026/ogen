@@ -3,14 +3,18 @@ package gen
 import (
 	"bytes"
 	"context"
+	"embed"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"runtime/pprof"
 	"slices"
+	"strings"
 	"sync"
 	"text/template"
+	"unicode"
 
 	"github.com/go-faster/errors"
 	"golang.org/x/sync/errgroup"
@@ -47,6 +51,7 @@ type TemplateConfig struct {
 	ResponseValidationEnabled bool
 
 	skipTestRegex *regexp.Regexp
+	UpperTitle    string
 }
 
 // AnyClientEnabled returns true, if webhooks or paths client is enabled.
@@ -227,6 +232,7 @@ func (w *writer) HandlersGenerate(templateName, fileName string, cfg TemplateCon
 
 	return nil
 }
+
 // Generate executes template to file using config.
 func (w *writer) Generate(templateName, fileName string, cfg TemplateConfig) (rerr error) {
 	buf := getBuffer()
@@ -258,7 +264,7 @@ func (w *writer) Generate(templateName, fileName string, cfg TemplateConfig) (re
 }
 
 // WriteSource writes generated definitions to fs.
-func (g *Generator) WriteSource(fs FileSystem, pkgName string) error {
+func (g *Generator) WriteSource(fs FileSystem, pkgName, projectroot string) error {
 	w := &writer{
 		fs: fs,
 		t:  vendoredTemplates(),
@@ -327,8 +333,7 @@ func (g *Generator) WriteSource(fs FileSystem, pkgName string) error {
 			pprof.Do(ctx, labels, func(ctx context.Context) {
 				err = w.Generate(templateName, fileName, cfg)
 				if templateName == "server" {
-					w.HandlersGenerate("impl.tmpl", fileName, cfg)
-					
+					CreateFile("./handlers/", projectroot, cfg)
 				}
 			})
 			if err != nil {
@@ -381,7 +386,7 @@ func (g *Generator) WriteSource(fs FileSystem, pkgName string) error {
 		}
 
 		generate(fileName, t.name)
-		
+
 	}
 
 	return grp.Wait()
@@ -424,3 +429,176 @@ func (g *Generator) hasURIObjectParams() bool {
 	})
 }
 
+//go:embed _tmpl/*
+var tmplFS embed.FS
+
+// 替换标记
+const (
+	startTag = "// >>>gen:impl>>>"
+	endTag   = "// <<<gen:impl<<<"
+)
+
+func CreateFile(handlers, projectroot string, cfg TemplateConfig) {
+	upper := CapitalizeFirst(cfg.Package)
+	cfg.UpperTitle = upper
+
+	// 解析模板
+	t, err := template.ParseFS(tmplFS, "_tmpl/impl.tmpl")
+	if err != nil {
+		panic("模板解析失败: " + err.Error())
+	}
+
+	// 执行模板（必须指定模板名 "header"）
+	var buf bytes.Buffer
+	if err := t.ExecuteTemplate(&buf, "header", cfg); err != nil {
+		panic("模板执行失败: " + err.Error())
+	}
+	newContent := buf.String()
+
+	if strings.TrimSpace(newContent) == "" {
+		panic("模板渲染后为空内容，可能是模板未执行或 cfg 数据为空")
+	}
+
+	dir := fmt.Sprintf("%s%s", handlers, cfg.Package)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		panic("创建目录失败: " + err.Error())
+	}
+	filepath := fmt.Sprintf("%s/%s_impl.go", dir, cfg.Package)
+	funcname := fmt.Sprintf("%sImpl", cfg.UpperTitle)
+
+	if _, err := os.Stat(filepath); err == nil {
+		// 文件存在，跳过写入
+		fmt.Println("⚠️ 文件已存在，跳过生成:", filepath)
+		CreateHandlersFile(funcname, dir, cfg)
+		return
+
+	} else if !os.IsNotExist(err) {
+		panic("检查文件状态失败: " + err.Error())
+	}
+
+	// 不存在，直接写入
+	if err := os.WriteFile(filepath, []byte(newContent), 0o644); err != nil {
+		panic("写文件失败: " + err.Error())
+	}
+	fmt.Println("✅ 新文件已创建:", filepath)
+	CreateHandlersFile(funcname, handlers, cfg)
+}
+
+func CreateHandlersFile(funcname, handlers string, cfg TemplateConfig) {
+	wd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+	dirName := filepath.Base(wd)
+
+	for _, op := range cfg.Operations {
+		
+
+		type OperationTemplateData struct {
+			Package     string
+			FuncName    string
+			ProjectRoot string
+			ParamType  string // cfg.Package 就是你传的包名
+			ReturnType string
+			Op *ir.Operation
+		}
+		var paramType, returnType string
+
+		if op.Request != nil && op.Request.Type != nil {
+			paramType = fmt.Sprintf("*%s",qualifiedGoType(op.Request.Type, cfg.Package))
+		}
+
+		if op.Responses != nil && op.Responses.Type != nil {
+			returnType = qualifiedGoType(op.Responses.Type, cfg.Package)
+		}
+
+		// funcName := getFuncName(op) // 自己封装的函数
+	
+
+		oper := OperationTemplateData{
+			Package:     cfg.Package,
+			FuncName:    funcname,
+			ProjectRoot: dirName,
+			ParamType:  paramType, // cfg.Package 就是你传的包名
+			ReturnType: returnType,
+			Op:         op,
+		}
+		// ✅ 注册自定义模板函数
+		funcs := template.FuncMap{
+			"stripPointer": func(s string) string {
+				return strings.TrimPrefix(s, "*")
+			},
+			"hasPointer": func(s string) bool {
+				return strings.HasPrefix(s, "*")
+			},
+			"title": strings.Title, // 你可以注册更多工具函数
+		}
+		// ✅ 加载模板并绑定函数
+		t, err := template.New("handlers.tmpl").Funcs(funcs).ParseFS(tmplFS, "_tmpl/*.tmpl")
+		if err != nil {
+			panic("模板解析失败: " + err.Error())
+		}
+
+		// 执行模板（必须指定模板名 "header"）
+		var buf bytes.Buffer
+		if err := t.ExecuteTemplate(&buf, "handlers.tmpl", oper); err != nil {
+			panic("模板执行失败: " + err.Error())
+		}
+		newContent := buf.String()
+
+		if strings.TrimSpace(newContent) == "" {
+			panic("模板渲染后为空内容，可能是模板未执行或 cfg 数据为空")
+		}
+
+		filepath := fmt.Sprintf("%s/%s_handler.go", handlers, op.Name)
+
+		if _, err := os.Stat(filepath); err == nil {
+			// 文件存在，跳过写入
+			fmt.Println("⚠️ 文件已存在，跳过生成:", filepath)
+			continue
+
+		} else if !os.IsNotExist(err) {
+			panic("检查文件状态失败: " + err.Error())
+		}
+
+		// 传入处理选项
+		// formatted, err := imports.Process(filepath, []byte(newContent), &imports.Options{
+		// 	Comments:   true,
+		// 	TabWidth:   8,
+		// 	TabIndent:  true,
+		// 	FormatOnly: false,
+		// })
+		// if err != nil {
+		// 	panic("imports 格式化失败: " + err.Error())
+		// }
+
+		// 不存在，直接写入
+		if err := os.WriteFile(filepath, []byte(newContent), 0o644); err != nil {
+			panic("写文件失败: " + err.Error())
+		}
+		fmt.Println("✅ 新文件已创建:", filepath)
+
+	}
+}
+
+// 首字母大写函数
+func CapitalizeFirst(s string) string {
+	if s == "" {
+		return s
+	}
+	runes := []rune(s)
+	runes[0] = unicode.ToUpper(runes[0])
+	return string(runes)
+}
+
+func qualifiedGoType(t *ir.Type, pkg string) string {
+	if t == nil {
+		return ""
+	}
+	// 判断是否是指针
+	prefix := ""
+	if t.PointerTo != nil {
+		prefix = "*"
+	}
+	return prefix + pkg + "." + t.Name
+}

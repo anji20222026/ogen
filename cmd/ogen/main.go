@@ -50,7 +50,7 @@ func cleanDir(targetDir string, files []os.DirEntry) (rerr error) {
 	return rerr
 }
 
-func generate(data []byte, packageName, targetDir string, clean bool, opts gen.Options) error {
+func generate(data []byte, packageName, targetDir string, clean bool, opts gen.Options, projectroot string) error {
 	log := opts.Logger
 	if log == nil {
 		log = zap.NewNop()
@@ -95,7 +95,7 @@ func generate(data []byte, packageName, targetDir string, clean bool, opts gen.O
 		Root:   targetDir,
 	}
 	start = time.Now()
-	if err := g.WriteSource(fs, packageName); err != nil {
+	if err := g.WriteSource(fs, packageName, projectroot); err != nil {
 		return errors.Wrap(err, "write")
 	}
 	log.Debug("Write", zap.Duration("took", time.Since(start)))
@@ -287,6 +287,7 @@ func run() error {
 		// Generator options.
 		targetDir   = set.String("target", "api", "Path to target dir")
 		packageName = set.String("package", "api", "Target package name")
+		projectroot = set.String("projectname", "project", "Target package name")
 		clean       = set.Bool("clean", false, "Clean generated files before generation")
 
 		// Logging options.
@@ -371,7 +372,7 @@ func run() error {
 		return errors.Wrap(err, "resolve spec")
 	}
 
-	if err := generate(data, *packageName, *targetDir, *clean, opts); err != nil {
+	if err := generate(data, *packageName, *targetDir, *clean, opts, *projectroot); err != nil {
 		if handleGenerateError(os.Stderr, logOptions.Color, err) {
 			return errors.New("generation failed")
 		}

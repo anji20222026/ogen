@@ -1,0 +1,11 @@
+{{- /*gotype: github.com/ogen-go/ogen/gen.TemplateConfig*/ -}}
+
+{{ define "header" }}
+package {{ .Package }}
+
+// >>>gen:impl>>>
+type {{ .UpperTitle }}Impl struct {
+    // Generated methods
+}
+// <<<gen:impl<<<
+{{ end }}
