@@ -44,8 +44,7 @@ import (
 	"github.com/ogen-go/ogen/otelogen"
 	"github.com/ogen-go/ogen/uri"
 	"github.com/ogen-go/ogen/validate"
-	"fastadmin/internal/handler/api"
-	"fastadmin/fastadmin"
+	"fastadmin/gen/auth"
 )
 
 func (s *ApiImpl) Logout(ctx context.Context) (api.LogoutRes, error) {

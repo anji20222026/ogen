@@ -263,7 +263,7 @@ func (w *writer) Generate(templateName, fileName string, cfg TemplateConfig) (re
 }
 
 // WriteSource writes generated definitions to fs.
-func (g *Generator) WriteSource(fs FileSystem, pkgName, projectroot string) error {
+func (g *Generator) WriteSource(fs FileSystem, pkgName, projectroot,targetDir string) error {
 	w := &writer{
 		fs: fs,
 		t:  vendoredTemplates(),
@@ -333,7 +333,7 @@ func (g *Generator) WriteSource(fs FileSystem, pkgName, projectroot string) erro
 				err = w.Generate(templateName, fileName, cfg)
 				if templateName == "server" {
 					handlers := "./internal/handlers"
-					CreateFile(handlers, projectroot, cfg)
+					CreateFile(handlers, projectroot,targetDir, cfg)
 				}
 			})
 			if err != nil {
@@ -438,7 +438,7 @@ const (
 	endTag   = "// <<<gen:impl<<<"
 )
 
-func CreateFile(handlers, projectroot string, cfg TemplateConfig) {
+func CreateFile(handlers, projectroot,targetDir string, cfg TemplateConfig) {
 	upper := CapitalizeFirst(cfg.Package)
 	cfg.UpperTitle = upper
 
@@ -469,7 +469,7 @@ func CreateFile(handlers, projectroot string, cfg TemplateConfig) {
 	if _, err := os.Stat(filepath); err == nil {
 		// 文件存在，跳过写入
 		fmt.Println("⚠️ 文件已存在，跳过生成:", filepath)
-		CreateHandlersFile(funcname, dir,projectroot, cfg)
+		CreateHandlersFile(funcname, dir,projectroot, targetDir,cfg)
 		return
 
 	} else if !os.IsNotExist(err) {
@@ -482,10 +482,10 @@ func CreateFile(handlers, projectroot string, cfg TemplateConfig) {
 	}
 	fmt.Println("✅ 新文件已创建:", filepath)
 	handlername := fmt.Sprintf("%s/%s", handlers, cfg.Package)
-	CreateHandlersFile(funcname, handlername,projectroot, cfg)
+	CreateHandlersFile(funcname, handlername,projectroot,targetDir, cfg)
 }
 
-func CreateHandlersFile(funcname, handlers,projectroot string, cfg TemplateConfig) {
+func CreateHandlersFile(funcname, handlers,projectroot,targetDir string, cfg TemplateConfig) {
 	
 	for _, op := range cfg.Operations {
 		
@@ -496,6 +496,7 @@ func CreateHandlersFile(funcname, handlers,projectroot string, cfg TemplateConfi
 			ProjectRoot string
 			ParamType  string // cfg.Package 就是你传的包名
 			ReturnType string
+			TargetDir string
 			Op *ir.Operation
 		}
 		var paramType, returnType string
@@ -518,6 +519,7 @@ func CreateHandlersFile(funcname, handlers,projectroot string, cfg TemplateConfi
 			ParamType:  paramType, // cfg.Package 就是你传的包名
 			ReturnType: returnType,
 			Op:         op,
+			TargetDir:  targetDir,
 		}
 		// ✅ 注册自定义模板函数
 		funcs := template.FuncMap{

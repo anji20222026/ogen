@@ -95,7 +95,7 @@ func generate(data []byte, packageName, targetDir string, clean bool, opts gen.O
 		Root:   targetDir,
 	}
 	start = time.Now()
-	if err := g.WriteSource(fs, packageName, projectroot); err != nil {
+	if err := g.WriteSource(fs, packageName, projectroot,targetDir); err != nil {
 		return errors.Wrap(err, "write")
 	}
 	log.Debug("Write", zap.Duration("took", time.Since(start)))

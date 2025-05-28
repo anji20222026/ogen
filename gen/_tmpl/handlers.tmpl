@@ -44,8 +44,7 @@ import (
 	"github.com/ogen-go/ogen/otelogen"
 	"github.com/ogen-go/ogen/uri"
 	"github.com/ogen-go/ogen/validate"
-	"{{ .ProjectRoot }}/internal/handler/{{.Package}}"
-	"{{ .ProjectRoot }}/{{ .ProjectRoot }}"
+	"{{ .ProjectRoot }}/{{ .TargetDir }}"
 )
 
 func (s *{{ .FuncName }}) {{ .Op.Name }}(ctx context.Context{{- if .Op.Request }},
