@@ -6,7 +6,6 @@ import (
 	"embed"
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"runtime"
 	"runtime/pprof"
@@ -333,7 +332,8 @@ func (g *Generator) WriteSource(fs FileSystem, pkgName, projectroot string) erro
 			pprof.Do(ctx, labels, func(ctx context.Context) {
 				err = w.Generate(templateName, fileName, cfg)
 				if templateName == "server" {
-					CreateFile("./handlers/", projectroot, cfg)
+					handlers := "./internal/handlers"
+					CreateFile(handlers, projectroot, cfg)
 				}
 			})
 			if err != nil {
@@ -459,7 +459,7 @@ func CreateFile(handlers, projectroot string, cfg TemplateConfig) {
 		panic("模板渲染后为空内容，可能是模板未执行或 cfg 数据为空")
 	}
 
-	dir := fmt.Sprintf("%s%s", handlers, cfg.Package)
+	dir := fmt.Sprintf("%s/%s", handlers, cfg.Package)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		panic("创建目录失败: " + err.Error())
 	}
@@ -469,7 +469,7 @@ func CreateFile(handlers, projectroot string, cfg TemplateConfig) {
 	if _, err := os.Stat(filepath); err == nil {
 		// 文件存在，跳过写入
 		fmt.Println("⚠️ 文件已存在，跳过生成:", filepath)
-		CreateHandlersFile(funcname, dir, cfg)
+		CreateHandlersFile(funcname, dir,projectroot, cfg)
 		return
 
 	} else if !os.IsNotExist(err) {
@@ -481,16 +481,12 @@ func CreateFile(handlers, projectroot string, cfg TemplateConfig) {
 		panic("写文件失败: " + err.Error())
 	}
 	fmt.Println("✅ 新文件已创建:", filepath)
-	CreateHandlersFile(funcname, handlers, cfg)
+	handlername := fmt.Sprintf("%s/%s", handlers, cfg.Package)
+	CreateHandlersFile(funcname, handlername,projectroot, cfg)
 }
 
-func CreateHandlersFile(funcname, handlers string, cfg TemplateConfig) {
-	wd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	dirName := filepath.Base(wd)
-
+func CreateHandlersFile(funcname, handlers,projectroot string, cfg TemplateConfig) {
+	
 	for _, op := range cfg.Operations {
 		
 
@@ -518,7 +514,7 @@ func CreateHandlersFile(funcname, handlers string, cfg TemplateConfig) {
 		oper := OperationTemplateData{
 			Package:     cfg.Package,
 			FuncName:    funcname,
-			ProjectRoot: dirName,
+			ProjectRoot: projectroot,
 			ParamType:  paramType, // cfg.Package 就是你传的包名
 			ReturnType: returnType,
 			Op:         op,
@@ -576,7 +572,7 @@ func CreateHandlersFile(funcname, handlers string, cfg TemplateConfig) {
 		if err := os.WriteFile(filepath, []byte(newContent), 0o644); err != nil {
 			panic("写文件失败: " + err.Error())
 		}
-		fmt.Println("✅ 新文件已创建:", filepath)
+		fmt.Println("✅ handlers新文件已创建:", filepath)
 
 	}
 }

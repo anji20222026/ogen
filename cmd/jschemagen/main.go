@@ -74,6 +74,7 @@ func run() error {
 		allowRemote   = flag.Bool("allow-remote", true, "Allow remote and external references")
 		trimPrefixes  = StringArrayFlag{"#/definitions/", "#/$defs/"}
 		logOptions    ogenzap.Options
+		projectroot      = flag.String("projectroot", "", "Root schema type name")
 	)
 	flag.Var(&trimPrefixes, "trim-prefixes", "Ref prefixes to trim")
 	logOptions.RegisterFlags(flag.CommandLine)
@@ -149,7 +150,9 @@ func run() error {
 	if *packageName == "" {
 		*packageName = "output"
 	}
-
+	if *projectroot == "" {
+		*projectroot = "Root"
+	}
 	if err := gen.GenerateSchema(schema, fs, gen.GenerateSchemaOptions{
 		TypeName:   *typeName,
 		FileName:   file,

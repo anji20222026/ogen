@@ -10,7 +10,13 @@
       "request": "launch",
       "mode": "auto",
       "program": "${workspaceFolder}/cmd/ogen",
-      "args": ["--target", "gen/auth", "./openapi/auth.yaml"]
+      "args": [
+        "--projectroot",
+        "fastadmin",
+        "--target",
+        "gen/auth",
+        "./openapi/auth.yaml"
+      ]
     }
   ]
 }

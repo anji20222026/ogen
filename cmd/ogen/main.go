@@ -287,7 +287,7 @@ func run() error {
 		// Generator options.
 		targetDir   = set.String("target", "api", "Path to target dir")
 		packageName = set.String("package", "api", "Target package name")
-		projectroot = set.String("projectname", "project", "Target package name")
+		projectroot = set.String("projectroot", "project", "project root")
 		clean       = set.Bool("clean", false, "Clean generated files before generation")
 
 		// Logging options.
@@ -306,7 +306,7 @@ func run() error {
 	if err := set.Parse(os.Args[1:]); err != nil {
 		return err
 	}
-
+	fmt.Println("Args:", os.Args)
 	if *version {
 		info, _ := ogenversion.GetInfo()
 		fmt.Println(info)

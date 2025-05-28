@@ -44,10 +44,11 @@ import (
 	"github.com/ogen-go/ogen/otelogen"
 	"github.com/ogen-go/ogen/uri"
 	"github.com/ogen-go/ogen/validate"
-	"ogen/internal/handler/api"
-	"ogen/ogen"
+	"fastadmin/internal/handler/api"
+	"fastadmin/fastadmin"
 )
 
-func (s *ApiImpl) GetCurrentUser(ctx context.Context) (api.GetCurrentUserRes, error) {
-	return api.GetCurrentUserRes{}, nil
+func (s *ApiImpl) Login(ctx context.Context,
+	req *api.LoginRequest,) (api.LoginRes, error) {
+	return api.LoginRes{}, nil
 }
