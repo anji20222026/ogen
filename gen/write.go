@@ -331,10 +331,13 @@ func (g *Generator) WriteSource(fs FileSystem, pkgName, projectroot, targetDir s
 			labels := pprof.Labels("template", templateName)
 			pprof.Do(ctx, labels, func(ctx context.Context) {
 				err = w.Generate(templateName, fileName, cfg)
-				if templateName == "server" {
+				if projectroot!="" {
+					if templateName == "server" {
 					handlers := "./internal/handlers"
 					CreateFile(handlers, projectroot, targetDir, cfg)
 				}
+				}
+				
 			})
 			if err != nil {
 				return errors.Wrapf(err, "template %q", templateName)

@@ -287,7 +287,7 @@ func run() error {
 		// Generator options.
 		targetDir   = set.String("target", "api", "Path to target dir")
 		packageName = set.String("package", "api", "Target package name")
-		projectroot = set.String("projectroot", "project", "project root")
+		projectroot = set.String("projectroot", "", "project root")
 		clean       = set.Bool("clean", false, "Clean generated files before generation")
 
 		// Logging options.

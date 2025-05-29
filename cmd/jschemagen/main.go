@@ -151,7 +151,7 @@ func run() error {
 		*packageName = "output"
 	}
 	if *projectroot == "" {
-		*projectroot = "Root"
+		*projectroot = ""
 	}
 	if err := gen.GenerateSchema(schema, fs, gen.GenerateSchemaOptions{
 		TypeName:   *typeName,
