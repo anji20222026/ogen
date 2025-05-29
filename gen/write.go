@@ -263,7 +263,7 @@ func (w *writer) Generate(templateName, fileName string, cfg TemplateConfig) (re
 }
 
 // WriteSource writes generated definitions to fs.
-func (g *Generator) WriteSource(fs FileSystem, pkgName, projectroot,targetDir string) error {
+func (g *Generator) WriteSource(fs FileSystem, pkgName, projectroot, targetDir string) error {
 	w := &writer{
 		fs: fs,
 		t:  vendoredTemplates(),
@@ -333,7 +333,7 @@ func (g *Generator) WriteSource(fs FileSystem, pkgName, projectroot,targetDir st
 				err = w.Generate(templateName, fileName, cfg)
 				if templateName == "server" {
 					handlers := "./internal/handlers"
-					CreateFile(handlers, projectroot,targetDir, cfg)
+					CreateFile(handlers, projectroot, targetDir, cfg)
 				}
 			})
 			if err != nil {
@@ -438,7 +438,7 @@ const (
 	endTag   = "// <<<gen:impl<<<"
 )
 
-func CreateFile(handlers, projectroot,targetDir string, cfg TemplateConfig) {
+func CreateFile(handlers, projectroot, targetDir string, cfg TemplateConfig) {
 	upper := CapitalizeFirst(cfg.Package)
 	cfg.UpperTitle = upper
 
@@ -469,7 +469,7 @@ func CreateFile(handlers, projectroot,targetDir string, cfg TemplateConfig) {
 	if _, err := os.Stat(filepath); err == nil {
 		// 文件存在，跳过写入
 		fmt.Println("⚠️ 文件已存在，跳过生成:", filepath)
-		CreateHandlersFile(funcname, dir,projectroot, targetDir,cfg)
+		CreateHandlersFile(funcname, dir, projectroot, targetDir, cfg)
 		return
 
 	} else if !os.IsNotExist(err) {
@@ -482,27 +482,25 @@ func CreateFile(handlers, projectroot,targetDir string, cfg TemplateConfig) {
 	}
 	fmt.Println("✅ 新文件已创建:", filepath)
 	handlername := fmt.Sprintf("%s/%s", handlers, cfg.Package)
-	CreateHandlersFile(funcname, handlername,projectroot,targetDir, cfg)
+	CreateHandlersFile(funcname, handlername, projectroot, targetDir, cfg)
 }
 
-func CreateHandlersFile(funcname, handlers,projectroot,targetDir string, cfg TemplateConfig) {
-	
+func CreateHandlersFile(funcname, handlers, projectroot, targetDir string, cfg TemplateConfig) {
 	for _, op := range cfg.Operations {
-		
 
 		type OperationTemplateData struct {
 			Package     string
 			FuncName    string
 			ProjectRoot string
-			ParamType  string // cfg.Package 就是你传的包名
-			ReturnType string
-			TargetDir string
-			Op *ir.Operation
+			ParamType   string // cfg.Package 就是你传的包名
+			ReturnType  string
+			TargetDir   string
+			Op          *ir.Operation
 		}
 		var paramType, returnType string
 
 		if op.Request != nil && op.Request.Type != nil {
-			paramType = fmt.Sprintf("*%s",qualifiedGoType(op.Request.Type, cfg.Package))
+			paramType = fmt.Sprintf("*%s", qualifiedGoType(op.Request.Type, cfg.Package))
 		}
 
 		if op.Responses != nil && op.Responses.Type != nil {
@@ -510,16 +508,15 @@ func CreateHandlersFile(funcname, handlers,projectroot,targetDir string, cfg Tem
 		}
 
 		// funcName := getFuncName(op) // 自己封装的函数
-	
 
 		oper := OperationTemplateData{
 			Package:     cfg.Package,
 			FuncName:    funcname,
 			ProjectRoot: projectroot,
-			ParamType:  paramType, // cfg.Package 就是你传的包名
-			ReturnType: returnType,
-			Op:         op,
-			TargetDir:  targetDir,
+			ParamType:   paramType, // cfg.Package 就是你传的包名
+			ReturnType:  returnType,
+			Op:          op,
+			TargetDir:   targetDir,
 		}
 		// ✅ 注册自定义模板函数
 		funcs := template.FuncMap{
@@ -560,18 +557,18 @@ func CreateHandlersFile(funcname, handlers,projectroot,targetDir string, cfg Tem
 		}
 
 		// 传入处理选项
-		// formatted, err := imports.Process(filepath, []byte(newContent), &imports.Options{
-		// 	Comments:   true,
-		// 	TabWidth:   8,
-		// 	TabIndent:  true,
-		// 	FormatOnly: false,
-		// })
-		// if err != nil {
-		// 	panic("imports 格式化失败: " + err.Error())
-		// }
+		formatted, err := imports.Process(filepath, []byte(newContent), &imports.Options{
+			Comments:   true,
+			TabWidth:   8,
+			TabIndent:  true,
+			FormatOnly: false,
+		})
+		if err != nil {
+			panic("imports 格式化失败: " + err.Error())
+		}
 
 		// 不存在，直接写入
-		if err := os.WriteFile(filepath, []byte(newContent), 0o644); err != nil {
+		if err := os.WriteFile(filepath, formatted, 0o644); err != nil {
 			panic("写文件失败: " + err.Error())
 		}
 		fmt.Println("✅ handlers新文件已创建:", filepath)

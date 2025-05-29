@@ -46,12 +46,9 @@ import (
 	"github.com/ogen-go/ogen/validate"
 	"{{ .ProjectRoot }}/{{ .TargetDir }}"
 )
-
-func (s *{{ .FuncName }}) {{ .Op.Name }}(ctx context.Context{{- if .Op.Request }},
-	req {{ .ParamType }},{{- end}}{{- if .Op.Params }}
-	params {{ .Op.Name }}Params,{{- end }}) {{- if .ReturnType }} ({{ .ReturnType }}, error) {{- else }} error {{- end }} {
+func (s *{{ .FuncName }}) {{ .Op.Name }}(ctx context.Context{{- if .Op.Request }} , req {{ .ParamType }}{{- end }}{{- if .Op.Params }}, params {{ .Op.Name }}Params{{- end }}){{- if .ReturnType }} ({{ .ReturnType }}, error){{- else }} error{{- end }} {
 	{{- if .ReturnType }}
-	return {{ .ReturnType }}{}, nil
+	return nil, nil
 	{{- else }}
 	return nil
 	{{- end }}
